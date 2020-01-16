@@ -16,5 +16,7 @@ Suggests:
     dotwhisker
 Imports: 
     dplyr,
-    tibble
+    tibble,
+    numDeriv,
+    gtools (>=3.5.0)
 RoxygenNote: 7.0.2
