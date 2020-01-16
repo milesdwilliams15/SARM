@@ -3,3 +3,4 @@ The SARM package is used for estimating, summarizing, and generating predictions
 
     devtools::install_github("milesdwilliams15/SARM")
 
+The `SARM` package vignette can be found at: http://rpubs.com/milesdwilliams15/566448
