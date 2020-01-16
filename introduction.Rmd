@@ -1,0 +1,91 @@
+---
+title: "The SARM Package for Strategic Autoregressive Models"
+author: "Miles D. Williams"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+The `SARM` package allows R users to estimate, summarize, and generate predictions from a strategic autoregressive model (SARM). The below summarizes the theoretical justification and implementation of the model, and includes example code for how it may be used.
+
+# What is the SARM model?
+
+The SARM estimator follows from a straightforward game theoretic model of strategic resource allocation. It is an extension of the StratAM model developed by Martin Steinwand (see this paper: [Estimating Free-Riding Behavior: The StratAM Model](https://www.cambridge.org/core/journals/political-analysis/article/estimating-freeriding-behavior-the-stratam-model/0CBD6176E53848732CEC2C151A491212)). SARM relaxes the assumption made by StratAM that other-player resources have positive spillin---that is, other player resources benefit an individual player, as in the case of the classic public goods game. Instead, SARM allows other-player resources to have either positive or negative spillin properties so that the game may either represent a(n) (impure) public goods problem subject to free-riding, or a private goods problem subject to rivalry. SARM further improves on StratAM by allowing for corner solutions to the allocation game by using a likelihood function based on the classic Tobit model.
+
+## The Theoretical Model
+
+For a set of players $i = 1, ..., n$, where $j$ denotes all players other than the $i^\text{th}$, define the objective function as
+$$
+V_i = (1 - \rho_i)\ln(R_i - y_i) + 
+\rho_i\ln(y_i + \beta y_j) ,\tag{1}
+$$
+subject to $R_i > y_i \geq 0$ and $0 < \rho < 1$. $R_i$ denotes $i$'s resource endowment, and $y_i$ denotes resources $i$ commits to the promotion of some good subject to strategic interaction. The production of this good is given by the expression $\ln(y_i + \beta y_j)$, where the form $\ln(\cdot)$ captures the standard assumption of monotonically increasing returns with diminishing returns to scale. The expression $\ln(R_i - y_i)$ captures a basket of all other goodies $i$ may spend its resources on. We may think of this as the cost of directing resources toward the good subject to strategic interaction. The parameter $\rho_i$ captures $i$'s preference for the good. As $\rho_i \to 1$, the fraction of the good produced that benefits $i$ increases. The assumption $0 < \rho_i < 1$ is WOLG.
+
+The production of the strategic good is a function both of $i$'s own resources and of all other actors $j$. The strategic parameter $\beta$ captures the effect of peer resources on $i$'s utility. If $\beta > 0$, the strategic good is a public good, nonrival and nonexcludable in its enjoyment. In the special case that $\beta = 1$, the good is a pure public good, while in the case that $0 < \beta < 1$, the good is an impure public good. In the latter case, $i$ only benefits from a fraction of the resources contributed by other players. If $\beta = 0$, the good is not a good subject to strategic interaction; it is nonrival, but excludable, making it like a club good. Finally, if $\beta < 0$, the strategic good is a private good, subject to rivalry and excludability. In this case, allocation of resources by other players detracts from $i$'s enjoyment.
+
+Thus, depending on the value $\beta$ takes, the game played by $n$ actors may either be a public goods game, or a rival goods game (or not a game at all). Which game is played shapes equilibrium play, which we observe by considering the reaction equation derived from the above. Assuming an interior solution and one-shot game-play, the optimal value of $y_i$ is such that
+$$\frac{1 - \rho_i}{R_i - y_i} = \frac{\rho_i}{y_i + \beta y_j}. \tag{2}$$
+When rearranged, this yields the following reaction equation
+$$y_i^* = \rho_iR_i - (1 - \rho_i)\beta y_j,\tag{3}$$
+where $y_i^*$ denotes a continuous latent response where, given the restriction that $0 \leq y_i$, the observed response $y_i = y_i^*$ if $y_i^* > 0$, $y_i = 0$ if $y_i^* \leq 0$. The game has a pure strategy Nash equilibrium, whose characteristics are defined by $R_i$, $\rho_i$, and $\beta y_i$. From the above we deduce that $\partial y_i^* / \partial \rho_i > 0$, $\partial y_i^* / \partial R_i > 0$, and $\partial y_i^*/\partial y_i = -(1 - \rho_i)\beta$, which is positive if $\beta < 0$ and negative if $\beta > 0$. Thus, if $\beta < 0$, making the good a rival good, each actor's best response to more resource allocation by peers is to increase its own level allocation. Conversely, if $\beta > 0$, making the good a public good, each actor's best response to more resource allocation by peers is to decrease its own level of allocation.
+
+Further note that the slope of $i$'s response to $j$ depends both on the magnitude and direction of the strategic parameter, and on the strength of preference for the strategic good. As $\rho_i \to 1$, the absolute value of $i$'s reaction to $j$ approaches 0; the converse is true as $\rho_i$ approaches 0. This captures the intuition that the more an actor intrinsically values the strategic good, the less its effort to promote that good is the product of other player activity. Think of an arms race. Say some player $x$ values the production of nuclear weapons greater than a second player $y$. Hence, $\rho_x > \rho_y$. Further suppose that $\beta < 0$ so that the production of nuclear weapons by one actor detracts from the enjoyment of another. We might thus think of $\ln(y_x + \beta y_y)$ as the relative deterrence power of $x$'s nuclear arsenal, with $\ln(y_y + \beta y_x)$ capturing the relative deterrence power of $y$'s nuclear arsenal. If we were to plot out the reaction functions of each player, we would observe that the intercept of the reaction curve of player $x$ is greater than that of player $y$, while the slope of the reaction curve of player $y$ is greater than that of player $x$. Player $x$ sees greater intrinsic value in enlarging its nuclear arsenal, and this intrinsic value thus plays a more substantial role in driving $x$'s allocation of resources toward the production of nuclear weapons. Meanwhile, player $y$'s allocation of resources toward the production of nuclear weapons is driven disproportionately more by the size of $x$'s arsenal. 
+
+## The Empirical Model
+Taking the reaction equation in the previous section as the theoretical data generating process for observed data, I specify an empirical model with the proviso of some additional assumptions. First, I model the parameter $\rho$ as as the cdf over a weighted sum $\mathbf{Z}\boldsymbol{\gamma}$, where the matrix $\mathbf{Z}$ contains a set of covariates that predict strength of preference for a strategic good. I use the cdf to capture the restriction that the theoretical parameter $\rho$ is bound between 0 and 1. I could just as easily use the logistic function, but for the sake of notational convenience, I describe the model with the cdf. Thus, I approximate the strength of preference as
+$$\boldsymbol{\rho} = \Phi(\mathbf{Z}\boldsymbol{\gamma}).\tag{4}$$
+Given in matrix form, the empirical reaction equation is defined as
+$$\mathbf{y} = \boldsymbol{\rho}\mathbf{R} - (1 - \boldsymbol{\rho})\boldsymbol{\beta}\mathbf{Y} + \boldsymbol{\epsilon}, \tag{5}$$
+where $\mathbf{y}$ is a vector of the observed expenditures of $n$ actors toward a strategic good, $\mathbf{Y}$ is a vector of the sum of other actor expenditures, and $\mathbf{R}$ is a vector of resource endowments per actor. The vector $\boldsymbol{\epsilon} \sim \text{N}(0, \sigma^2)$ captures player error, assumed to be normally distributed. Given the assumption that the outcome variable is continuous but strictly non-negative, this implies the following likelihood equation:
+$$
+\begin{aligned}
+\boldsymbol{\hat{\rho}} & = \boldsymbol{\Phi(\mathbf{Z}\hat{\gamma})},\\
+\mathbf{\hat{y}} & = \boldsymbol{\hat{\rho}}\mathbf{R} - (1 - \boldsymbol{\hat{\rho}})\boldsymbol{\hat{\beta}}\mathbf{Y} ,\\
+\mathbf{L}(\boldsymbol{\hat{\gamma}}, \boldsymbol{\hat{\beta}}, \hat{\sigma}) & = \prod [1 - \Phi(\mathbf{\hat{y}}/\hat{\sigma})]^{1 - \mathbf{D}} [\varphi([\mathbf{y} - \mathbf{\hat{y}}]/\hat{\sigma})/\hat{\sigma}]^\mathbf{D} : \mathbf{D} = 1 \quad \text{if} \quad \mathbf{y} > 0. \\
+\end{aligned}
+ \tag{6}
+$$
+The above denotes the product over $m$ observations (subscripts not included for convenience's sake). Using a numerical optimizer, I find the fitted parameter values that minimize $-\ln[\mathbf{L}(\boldsymbol{\hat{\gamma}}, \boldsymbol{\hat{\beta}}, \hat{\sigma})]$.
+
+## Statistical Inference
+
+Of course, I don't only care about the fitted parameters; I also want to make statistical inferences. Assuming the model is correctly specified, the inverse of the hessian matrix ($\mathbf{H}^{-1}$)---that is the $p \times p$ matrix where diagonal elements denote the second partial derivatives of the likelihood per each of $p$ model parameters---serves as the variance-covariance matrix for the parameters of interest. The standard errors for the parameters are then, of course, the square root of the diagonal elements of $\mathbf{H}^{-1}$ (e.g., $\sqrt{\text{diag}\left[\mathbf{H}^{-1}\right]}$). I should note that other descriptions of how to obtain the standard errors usually specify that we take the inverse of the negative hessian. This would be appropriate if we had chosen to maximize the log-likelihood, rather than minimize the negative log-likelihood. 
+
+If we were to stop here, however, we necessarily impose the assumption that $\mathbf{\epsilon}$ has an independent and identical distribution---an heroic assumption. Heteroskedasticity and/or non-independence in the error term would lead to biased estimates of parameter variance. Robust standard errors *a la* the sandwich estimator can facilitate better (less biased) inferences. The formula for the robust sandwich matrix is given as
+$$\mathbf{V} = \mathbf{H}^{-1}\mathbf{M}\mathbf{H}^{-1}\tag{7}$$
+where
+$$\mathbf{M} = \mathbf{G}'\mathbf{G}.\tag{8}$$
+$\mathbf{G}$ is a $m \times p$ matrix, where each row denotes the observation-wise gradients of the first partial derivatives of the likelihood function per each of $p$ model parameters. The $p \times p$ matrix $\mathbf{M}$ is the cross product of $\mathbf{G}$. This matrix denotes the "meat" of the sandwich estimator, so called because the meat matrix is sandwiched between two "bread" matrices, each the inverse hessian matrix. The dot product of these matrices yields the robust variance-covariance matrix $\mathbf{V}$, where parameter standard errors are given as $\sqrt{\text{diag}[\mathbf{V}]}$. In practice, many include a degrees of freedom adjustment, yielding the HC1 estimator. This yields the following modified estimate of parameter standard errors, where $m$ denotes the number of observations and $p$ the number of parameters:
+$$\sqrt{\text{diag}\left[\frac{m - 1}{m - p}\mathbf{V}\right]}. \tag{9}$$
+
+We may still worry that some observations may not be independent of the others---observations may be clustered. We can account for this by calculating the matrix $\mathbf{K}$, a $k \times p$ matrix of the cluster-specific first partial derivatives of the likelihood per each model parameter. The cluster-robust covariance matrix is then given as
+$$\mathbf{V}_\text{cluster} = \mathbf{H^{-1}(K'K)H^{-1}}. \tag{10}$$
+And, with the degrees of freedom adjustment, the cluster-robust standard errors are given as 
+$$\sqrt{\text{diag}\left[\frac{k}{k - 1}\frac{m - 1}{m - p}\mathbf{V}_\text{cluster} \right]}. \tag{11}$$
+
+The well-recognized fact that violations of iid assumptions imply that the model itself has been mispecified is not lost on me. Heteroskedasticity and/or non-independence not only make for inefficient estimates of parameter variance (which the above robust sandwich estimators help to correct), but also biased parameter estimates (which robust standard errors cannot fix). This is a problem unique to maximum likelihood estimators such as logit, probit, and Tobit where model variance, captured by the parameter $\sigma$ is integral to the estimation of intercept and slope coefficients. The reader will note that the SARM likelihood function follows the functional form of the Tobit model, and as such, the variance term directly affects the fitted parameters of theoretical interest to the researcher. Of course, if one treats the likelihood function as a convenient smoother, rather than the explicit d.g.p., one can argue that the parameter estimates are good enough, and that using robust standard errors suffices for statistical inference. Not everyone agrees (e.g., David Giles), but I don't wish to get into the nuances of the debate here. All I will say is this. In theory, I admit that it is better to have a correctly specified model, but in practice I've found accounting for heteroskedasticity with the sandwich estimator the more practical option relative to modeling the variance explicitly. The latter is far less computationally intensive, and any improvement in the estimated parameters due to "correctly" specifying the model is often marginal (though there are exceptions). I often find that the cost paid in time to convergence often exceeds this marginal reduction in bias. Thus, in practice I favor the more affordable good-enough parameter estimate with efficient standard errors over the computationally expensive, though marginally better, parameter estimate with efficient standard errors.
+
+The above notwithstanding, should the researcher prefer to directly model the variance term, one can modify the likelihood function so that $\sigma$ is modeled as a function of covariates that account for observation- or group-specific variance:
+$$
+\begin{aligned}
+\boldsymbol{\hat{\rho}} & = \boldsymbol{\Phi(\mathbf{Z}\hat{\gamma})},\\
+\mathbf{\hat{y}} & = \boldsymbol{\hat{\rho}}\mathbf{R} - (1 - \boldsymbol{\hat{\rho}})\boldsymbol{\hat{\beta}}\mathbf{Y} ,\\
+\hat{\sigma} & = \mathbf{\exp(W\boldsymbol{\hat{\psi}})},\\
+\mathbf{L}(\boldsymbol{\hat{\gamma}}, \boldsymbol{\hat{\beta}}, \boldsymbol{\hat{\psi}}) & = \prod [1 - \Phi(\mathbf{\hat{y}}/\hat{\sigma})]^{1 - \mathbf{D}} [\varphi([\mathbf{y} - \mathbf{\hat{y}}]/\hat{\sigma})/\hat{\sigma}]^\mathbf{D} : \mathbf{D} = 1 \quad \text{if} \quad \mathbf{y} > 0. \\
+\end{aligned}
+ \tag{12}
+$$
+Assuming that observations are clustered within groups (for example, say the errors are not independent by each of $n$ actors for which we have $>1$ observations), we can explicitly model the group-specific variance by fitting $\sigma$ as the exponential transformation of the weighted sum $\mathbf{W}\boldsymbol{\hat{\psi}}$, where $\mathbf{W}$ is a $m \times k$ matrix consisting of a constant and $k - 1$ group dummy variables. Under the presumption that the variance term is properly specified, the inverse of the hessian of the likelihood constitutes an unbiased estimate of the variance-covariance matrix. Depending on the number of groups, time to convergence will vary. If the number of groups is quite large, time to convergence may border on impractical, in which case sticking with the likelihood given in equation 6 and using clustered standard errors serves as the second-best option.
+
+If the researcher nevertheless insists on optimizing equation 12, the computational costs notwithstanding, a faster (thought imperfect) solution can be strong-armed. Replace the $m \times k$ matrix $\mathbf{W}$ with a $m \times 2$ matrix $\mathbf{U}$ where the first column is a constant and the second a vector of de-meaned values of $\mathbf{y}$, centered around group-specific means of the outcome. The slope on the de-meaned outcome denotes the within cluster change in the variation in the model variance over values of $\mathbf{y}$. I should note that the downside of this approach is that it implies the cluster-specific variance is either increasing or decreasing linearly with the value of the outcome.
+
