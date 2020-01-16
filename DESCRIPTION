@@ -17,6 +17,5 @@ Suggests:
 Imports: 
     dplyr,
     tibble,
-    numDeriv,
-    gtools (>=3.5.0)
+    numDeriv
 RoxygenNote: 7.0.2
